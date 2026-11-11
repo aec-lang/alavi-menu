@@ -992,10 +992,6 @@
               <p class="mgr-note">مدل U²-Net داخل خود برنامه است و روی همین گوشی اجرا می‌شود (بدون اینترنت و سرور، بعد از بار اول). مدل فقط تشخیص می‌دهد کدام پیکسل غذاست و کدام پس‌زمینه؛ پس‌زمینه شفاف می‌شود تا آیتم روی سینی ترکیب شود. پیکسل‌های خود غذا اصلاً ساخته، بازسازی یا رنگ‌آمیزی نمی‌شوند — فقط اندازه و جای آیتم روی سینی تنظیم می‌شود.</p>
             </div>
             <div class="f-field">
-              <label for="fTrayScale">اندازهٔ این آیتم روی سینی (درصد)</label>
-              <input id="fTrayScale" type="text" inputmode="numeric" placeholder="۱۰۰" />
-            </div>
-            <div class="f-field">
               <label for="fName">نام آیتم</label>
               <input id="fName" type="text" placeholder="مثلاً: چلوکباب سلطانی" />
             </div>
@@ -1163,10 +1159,6 @@
           <h3 id="dName"></h3>
           <p class="d-desc" id="dDesc"></p>
           <div class="d-price" id="dPrice"></div>
-          <div class="ctl-row">
-            <label for="dTrayRange">اندازهٔ این آیتم روی سینی <output id="dTrayOut">۱۰۰٪</output></label>
-            <input type="range" id="dTrayRange" min="50" max="200" value="100" />
-          </div>
           <div class="d-controls">
             <div class="d-stepper">
               <button type="button" id="dPlus" aria-label="بیشتر"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -1895,9 +1887,6 @@
         document.getElementById("dName").textContent = m.name;
         document.getElementById("dDesc").textContent = m.desc || "توضیحی برای این آیتم ثبت نشده است.";
         document.getElementById("dPrice").innerHTML = faNum(m.price) + " <small>تومان</small>";
-        var r = document.getElementById("dTrayRange");
-        r.value = m.trayScale || 100;
-        document.getElementById("dTrayOut").textContent = faNum(r.value) + "٪";
         updateDetailQty();
         detailOverlay.classList.add("open");
         document.body.style.overflow = "hidden";
@@ -1916,13 +1905,6 @@
       document.getElementById("dPlus").addEventListener("click", function () { if (detailId) { changeQty(detailId, 1); updateDetailQty(); } });
       document.getElementById("dMinus").addEventListener("click", function () { if (detailId) { changeQty(detailId, -1); updateDetailQty(); } });
       document.getElementById("dAdd").addEventListener("click", function () { if (detailId) { changeQty(detailId, 1); updateDetailQty(); showToast(byId[detailId].name + " به سینی اضافه شد"); } });
-      document.getElementById("dTrayRange").addEventListener("input", function () {
-        if (!detailId || !byId[detailId]) return;
-        byId[detailId].trayScale = parseInt(this.value, 10) || 100;
-        document.getElementById("dTrayOut").textContent = faNum(this.value) + "٪";
-        if (overlay.classList.contains("open")) renderReceipt();
-      });
-
       /* ---------- حذف پس‌زمینه با مدل واقعی هوش مصنوعی U²-Net روی خود گوشی ----------
          قانون ثابت برنامه: مدل «تقسیم‌بندی» است، نه مدل تولیدی. فقط ماسک می‌سازد و
          پیکسل‌های پس‌زمینه شفاف می‌شوند؛ رنگ و بافت خود غذا حتی یک پیکسل هم ساخته،
@@ -3110,8 +3092,6 @@
         formImg = m ? m.img : "";
         formCutout = m ? !!m.cutout : false;
         setBgStatus(null);
-        var fts = document.getElementById("fTrayScale");
-        if (fts) fts.value = m ? String(m.trayScale || 100) : "100";
         fPreview.src = formImg || DEFAULT_IMG[fCat.value];
         fDelete.hidden = !m;
         fDelete.classList.remove("armed"); fDelete.dataset.armed = "";
@@ -3221,7 +3201,7 @@
         var price = parsePrice(fPrice.value);
         if (!(price > 0)) { showToast("قیمت درست وارد نشده"); fPrice.focus(); return; }
         var img = formImg || DEFAULT_IMG[cat];
-        var trayScaleVal = Math.max(50, Math.min(200, parsePrice(document.getElementById("fTrayScale").value) || 100));
+        var trayScaleVal = (editingId && byId[editingId] && byId[editingId].trayScale) || 100;
         if (editingId && byId[editingId]) {
           var m = byId[editingId];
           m.name = name; m.price = price; m.cat = cat; m.zone = cat;
