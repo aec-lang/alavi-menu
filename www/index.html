@@ -201,7 +201,7 @@
         display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
       }
 
-      /* تب‌ها همیشه در یک خط: فقط غذا، نوشیدنی، مخلفات */
+      /* تب‌ها همیشه در یک خط: همه، غذا، نوشیدنی، مخلفات */
       .tabs { flex-wrap: nowrap; }
       .tab { white-space: nowrap; }
       @media (max-width: 480px) {
@@ -805,6 +805,17 @@
       .ft-head { display: flex; gap: 6px; font-size: 11px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; padding-inline-end: 42px; }
       .ft-head span:nth-child(1) { flex: 2.1; } .ft-head span:nth-child(2) { flex: 0.62; text-align: center; } .ft-head span:nth-child(3) { flex: 1.15; }
       .ft-add-comp { width: 100%; justify-content: center; margin-top: 2px; }
+
+      /* ---------- گوشی: فشرده‌سازی عمودی هدر و عکس کارت‌ها ----------
+         با تب «همه» ردیف‌های منو بیشتر شده‌اند؛ این فشرده‌سازی باعث می‌شود
+         دکمه‌های افزودنِ ردیف‌های میانی نه زیر نوار چسبان سینی (پایین صفحه)
+         گیر کنند و نه از کادر بیرون بزنند. */
+      @media (max-width: 560px) {
+        .hero .rule { display: none; }
+        .hero-logo { width: 38px; height: 38px; margin-top: 2px; }
+        .hero h1 { margin: 3px 0 1px; }
+        .card .photo { aspect-ratio: 12 / 11; }
+      }
     </style>
   </head>
   <body>
@@ -1335,6 +1346,12 @@
         { id: "side",  label: "مخلفات" }
       ];
 
+      /* تب‌های بالای صفحهٔ اصلی: «همه» کنار غذا می‌نشیند و کل منو را با هم
+         نشان می‌دهد؛ سه دستهٔ واقعی بعد از آن می‌آیند. دستهٔ «همه» فقط برای
+         نمایش است و آیتم‌ها همچنان دستهٔ واقعی خودشان (غذا/نوشیدنی/مخلفات)
+         را دارند، پس مدیریت منو و گزارش‌ها دست نخورده می‌مانند. */
+      var TAB_CATS = [{ id: "all", label: "همه" }].concat(CATS);
+
       /* ---------- سینی‌ها ----------
          سینی یک «بسته آماده» است: اسم و عکس خودش را دارد و از چند قلم تشکیل
          می‌شود؛ هر قلم اسم، تعداد پیش‌فرض و قیمتِ هر عددِ خودش را دارد.
@@ -1409,7 +1426,7 @@
         ]
       };
 
-      var state = { cat: "main", cart: {}, trayOrders: [] }; /* cart: id -> qty | trayOrders: سینی‌های آمادهٔ افزوده‌شده به این سفارش، هرکدام با قلم‌های تنظیم‌شده‌اش */
+      var state = { cat: "all", cart: {}, trayOrders: [] }; /* برنامه به‌صورت پیش‌فرض روی تب «همه» (کل منو) باز می‌شود */ /* cart: id -> qty | trayOrders: سینی‌های آمادهٔ افزوده‌شده به این سفارش، هرکدام با قلم‌های تنظیم‌شده‌اش */
       var settings = { tray: 100, main: 100, drink: 100, side: 100, density: "g3", fit: "cover", autoBg: false };
       var detailId = null;
       var invoiceSeq = 1001;
@@ -1663,14 +1680,14 @@
       }
 
       /* ---------- tabs ----------
-         دسته‌بندی‌های بالای صفحهٔ اصلی دقیقاً سه‌تاست: غذا، نوشیدنی، مخلفات.
+         تب‌های بالای صفحهٔ اصلی: «همه» (کل منو، نمای پیش‌فرض)، غذا، نوشیدنی، مخلفات.
          سینی‌های آماده دسته‌بندی نیستند؛ از دکمهٔ «سینی‌های آماده» در بالای
          صفحه باز می‌شوند، نه از این نوار. */
       function renderTabs() {
         tabsEl.innerHTML = "";
-        CATS.forEach(function (c) {
+        TAB_CATS.forEach(function (c) {
           var inCat = 0;
-          cartList().forEach(function (e) { if (e.item.cat === c.id) inCat += e.qty; });
+          cartList().forEach(function (e) { if (c.id === "all" || e.item.cat === c.id) inCat += e.qty; });
           var b = document.createElement("button");
           b.className = "tab";
           b.setAttribute("role", "tab");
@@ -1701,8 +1718,10 @@
           renderTrayGrid();
           return;
         }
-        if (hint) hint.textContent = "برای دیدن توضیحات و جزئیات هر آیتم، روی عکسش بزن.";
-        MENU.filter(function (m) { return m.cat === state.cat; }).forEach(function (m) {
+        if (hint) hint.textContent = state.cat === "all"
+          ? "این کل منوست؛ برای دیدن توضیحات و جزئیات هر آیتم، روی عکسش بزن."
+          : "برای دیدن توضیحات و جزئیات هر آیتم، روی عکسش بزن.";
+        MENU.filter(function (m) { return state.cat === "all" || m.cat === state.cat; }).forEach(function (m) {
           var qty = state.cart[m.id] || 0;
           var card = document.createElement("article");
           card.className = "card" + (qty > 0 ? " in-tray" : "");
@@ -2771,9 +2790,19 @@
 
       function computeReport(list) {
         var rev = 0, qtyTotal = 0, itemRevTotal = 0, hasItems = false;
-        var byItem = {}, byCat = {}, byDay = {};
+        var byItem = {}, byCat = {}, byDay = {}, byHour = {}, byWeekday = {};
         list.forEach(function (inv) {
           rev += inv.total || 0;
+          /* فروش بر اساس ساعت روز و روز هفته، برای بخش «پرفروش‌ترین ساعات/ایام» */
+          var invDate = new Date(inv.ts);
+          var hh = invDate.getHours();
+          if (!byHour[hh]) byHour[hh] = { hour: hh, rev: 0, count: 0 };
+          byHour[hh].rev += inv.total || 0;
+          byHour[hh].count += 1;
+          var wd = (invDate.getDay() + 1) % 7; /* ۰=شنبه … ۶=جمعه */
+          if (!byWeekday[wd]) byWeekday[wd] = { wd: wd, rev: 0, count: 0 };
+          byWeekday[wd].rev += inv.total || 0;
+          byWeekday[wd].count += 1;
           var dayKey = inv.date || new Date(inv.ts).toLocaleDateString("fa-IR");
           if (!byDay[dayKey]) byDay[dayKey] = { label: dayKey, rev: 0, count: 0, ts: inv.ts };
           byDay[dayKey].rev += inv.total || 0;
@@ -2792,7 +2821,7 @@
             byCat[ck].qty += it.qty || 0;
           });
         });
-        return { rev: rev, qtyTotal: qtyTotal, itemRevTotal: itemRevTotal, hasItems: hasItems, byItem: byItem, byCat: byCat, byDay: byDay };
+        return { rev: rev, qtyTotal: qtyTotal, itemRevTotal: itemRevTotal, hasItems: hasItems, byItem: byItem, byCat: byCat, byDay: byDay, byHour: byHour, byWeekday: byWeekday };
       }
 
       function renderReport() {
@@ -2809,12 +2838,35 @@
 
         var R = computeReport(list);
         var avg = list.length ? Math.round(R.rev / list.length) : 0;
+
+        /* پرفروش‌ترین ساعات روز و ایام هفته، با میانگین:
+           میانگین ساعتی = جمع فروش آن ساعت تقسیم بر تعداد روزهای بازه؛
+           میانگین روز هفته = جمع فروش آن روز تقسیم بر تعداد دفعاتی که آن روز در بازه آمده است. */
+        var WD_NAMES = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
+        var dayMsR = 86400000;
+        var daysInRange = Math.max(1, Math.floor((range.to - range.from) / dayMsR) + 1);
+        var wdOcc = [0, 0, 0, 0, 0, 0, 0];
+        var curDay = new Date(range.from); curDay.setHours(0, 0, 0, 0);
+        var guardD = 0;
+        while (curDay.getTime() <= range.to && guardD < 3700) {
+          wdOcc[(curDay.getDay() + 1) % 7]++;
+          curDay = new Date(curDay.getTime() + dayMsR);
+          guardD++;
+        }
+        var hoursArr = Object.keys(R.byHour).map(function (k) { return R.byHour[k]; })
+          .sort(function (a, b) { return (b.rev - a.rev) || (b.count - a.count); });
+        var wdArr = Object.keys(R.byWeekday).map(function (k) { return R.byWeekday[k]; })
+          .sort(function (a, b) { return (b.rev - a.rev) || (b.count - a.count); });
+        var peakHour = hoursArr.length ? hoursArr[0] : null;
+        var peakWd = wdArr.length ? wdArr[0] : null;
         var html =
           '<div class="rep-stats">' +
           '<div class="rep-stat hero-stat"><div class="k">جمع فروش دوره</div><div class="v">' + faNum(R.rev) + ' <small>تومان</small></div></div>' +
           '<div class="rep-stat"><div class="k">تعداد فاکتور</div><div class="v">' + faNum(list.length) + "</div></div>" +
           '<div class="rep-stat"><div class="k">میانگین مبلغ هر فاکتور</div><div class="v">' + faNum(avg) + ' <small>تومان</small></div></div>' +
           '<div class="rep-stat"><div class="k">تعداد اقلام فروخته‌شده</div><div class="v">' + faNum(R.qtyTotal) + "</div></div>" +
+          (peakHour ? '<div class="rep-stat"><div class="k">پرفروش‌ترین ساعت روز</div><div class="v">ساعت ' + faDigits(pad2(peakHour.hour)) + ' <small>— میانگین روزانه ' + faNum(Math.round(peakHour.rev / daysInRange)) + ' تومان</small></div></div>' : "") +
+          (peakWd ? '<div class="rep-stat"><div class="k">پرفروش‌ترین روز هفته</div><div class="v">' + WD_NAMES[peakWd.wd] + ' <small>— میانگین هر ' + WD_NAMES[peakWd.wd] + ' ' + faNum(Math.round(peakWd.rev / (wdOcc[peakWd.wd] || 1))) + ' تومان</small></div></div>' : "") +
           "</div>";
 
         if (!list.length) {
@@ -2862,6 +2914,35 @@
             '<span class="rv">' + faNum(d.rev) + ' تومان</span></div>';
         });
         html += "</div>";
+
+        if (hoursArr.length) {
+          var maxHourRev = hoursArr[0].rev || 1;
+          html += '<div class="rep-sec"><h4>پرفروش‌ترین ساعات روز</h4>';
+          hoursArr.slice(0, 8).forEach(function (e, i) {
+            html += '<div class="rep-item-row"><div class="lr">' +
+              '<span class="rank">' + faNum(i + 1) + '</span>' +
+              '<span class="nm">ساعت ' + faDigits(pad2(e.hour)) + ' تا ' + faDigits(pad2((e.hour + 1) % 24)) + '</span>' +
+              '<span class="rv">' + faNum(e.rev) + ' تومان</span></div>' +
+              '<div style="font-size:12px;color:#8a7861;margin-top:2px;padding-inline-start:29px">' + faNum(e.count) + ' فاکتور — میانگین روزانه ' + faNum(Math.round(e.rev / daysInRange)) + ' تومان</div>' +
+              '<div class="bar-track"><div class="bar-fill" style="width:' + Math.max(3, Math.round(e.rev / maxHourRev * 100)) + '%"></div></div></div>';
+          });
+          html += '<div class="rep-sub" style="margin-top:8px">میانگین روزانه یعنی جمع فروش هر ساعت در کل بازه، تقسیم بر ' + faNum(daysInRange) + ' روزِ این بازه.</div></div>';
+        }
+
+        if (wdArr.length) {
+          var maxWdRev = wdArr[0].rev || 1;
+          html += '<div class="rep-sec"><h4>پرفروش‌ترین ایام هفته</h4>';
+          wdArr.forEach(function (e, i) {
+            var occ = wdOcc[e.wd] || 1;
+            html += '<div class="rep-item-row"><div class="lr">' +
+              '<span class="rank">' + faNum(i + 1) + '</span>' +
+              '<span class="nm">' + WD_NAMES[e.wd] + '</span>' +
+              '<span class="rv">' + faNum(e.rev) + ' تومان</span></div>' +
+              '<div style="font-size:12px;color:#8a7861;margin-top:2px;padding-inline-start:29px">' + faNum(e.count) + ' فاکتور در ' + faNum(occ) + ' ' + WD_NAMES[e.wd] + 'ٔ این بازه — میانگین هر ' + WD_NAMES[e.wd] + ' ' + faNum(Math.round(e.rev / occ)) + ' تومان</div>' +
+              '<div class="bar-track"><div class="bar-fill" style="width:' + Math.max(3, Math.round(e.rev / maxWdRev * 100)) + '%"></div></div></div>';
+          });
+          html += "</div>";
+        }
 
         html += '<div class="rep-sec"><h4>فاکتورهای این دوره — با تاریخ و ساعت</h4>';
         list.slice().reverse().forEach(function (inv) {
@@ -3137,7 +3218,7 @@
         document.getElementById("formTitle").textContent = m ? "ویرایش آیتم" : "آیتم جدید";
         fName.value = m ? m.name : "";
         fPrice.value = m ? (m.price ? String(m.price) : "") : "";
-        fCat.value = m ? m.cat : state.cat;
+        fCat.value = m ? m.cat : (CATS.some(function (c) { return c.id === state.cat; }) ? state.cat : "main");
         fDesc.value = m ? m.desc : "";
         formImg = m ? m.img : "";
         formCutout = m ? !!m.cutout : false;
